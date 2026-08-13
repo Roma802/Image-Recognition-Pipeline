@@ -13,28 +13,38 @@ sequenceDiagram
     participant DDB as DynamoDB (ImageLabels)
     participant L3 as Lambda 3 (GetImageLabels)
 
-    box RGB(240, 244, 248) "1. File Upload"
-        Client->>APIGW: POST /upload
-        APIGW->>L1: Invoke lambda_handler
-        L1-->>APIGW: 200 OK (body: presignedUrl)
-        APIGW-->>Client: Presigned PUT URL
-        Client->>S3: Direct Upload (PUT /uploads/file.jpg)
+    box 1. File Upload
+        participant Client
+        participant APIGW
+        participant L1
+        participant S3
     end
 
-    box RGB(240, 248, 240) "2. AI Processing"
-        S3->>L2: Trigger: s3:ObjectCreated
-        L2->>Rekog: detect_labels(Bucket, Key)
-        Rekog-->>L2: Detected Labels
-        L2->>DDB: put_item(imageId, labels, bucket)
+    box 2. AI Processing
+        participant L2
+        participant Rekog
+        participant DDB
     end
 
-    box RGB(248, 240, 248) "3. Data Retrieval"
-        Client->>APIGW: GET /images?imageId=uploads/...
-        APIGW->>L3: Invoke lambda_handler
-        L3->>DDB: get_item(Key={'imageId': image_id})
-        DDB-->>L3: Return Item (labels, bucket)
-        Note over L3: Generate Presigned GET URL locally via SDK (boto3)
-        L3-->>APIGW: 200 OK (body: imageId, labels, imageUrl)
-        APIGW-->>Client: JSON Response (labels & imageUrl)
+    box 3. Data Retrieval
+        participant L3
     end
-```
+
+    Client->>APIGW: POST /upload
+    APIGW->>L1: Invoke lambda_handler
+    L1-->>APIGW: 200 OK (body: presignedUrl)
+    APIGW-->>Client: Presigned PUT URL
+    Client->>S3: Direct Upload (PUT /uploads/file.jpg)
+
+    S3->>L2: Trigger: s3:ObjectCreated
+    L2->>Rekog: detect_labels(Bucket, Key)
+    Rekog-->>L2: Detected Labels
+    L2->>DDB: put_item(imageId, labels, bucket)
+
+    Client->>APIGW: GET /images?imageId=uploads/...
+    APIGW->>L3: Invoke lambda_handler
+    L3->>DDB: get_item(Key={'imageId': image_id})
+    DDB-->>L3: Return Item (labels, bucket)
+    Note over L3: Generate Presigned GET URL locally via SDK (boto3)
+    L3-->>APIGW: 200 OK (body: imageId, labels, imageUrl)
+    APIGW-->>Client: JSON Response (labels & imageUrl)
