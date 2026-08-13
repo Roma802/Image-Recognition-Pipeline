@@ -13,7 +13,7 @@ sequenceDiagram
     participant DDB as DynamoDB (ImageLabels)
     participant L3 as Lambda 3 (GetImageLabels)
 
-    box RGB(240, 244, 248) 1. File Upload
+    box RGB(240, 244, 248) "1. File Upload"
         Client->>APIGW: POST /upload
         APIGW->>L1: Invoke lambda_handler
         L1-->>APIGW: 200 OK (body: presignedUrl)
@@ -21,14 +21,14 @@ sequenceDiagram
         Client->>S3: Direct Upload (PUT /uploads/file.jpg)
     end
 
-    box RGB(240, 248, 240) 2. AI Processing
+    box RGB(240, 248, 240) "2. AI Processing"
         S3->>L2: Trigger: s3:ObjectCreated
         L2->>Rekog: detect_labels(Bucket, Key)
         Rekog-->>L2: Detected Labels
         L2->>DDB: put_item(imageId, labels, bucket)
     end
 
-    box RGB(248, 240, 248) 3. Data Retrieval
+    box RGB(248, 240, 248) "3. Data Retrieval"
         Client->>APIGW: GET /images?imageId=uploads/...
         APIGW->>L3: Invoke lambda_handler
         L3->>DDB: get_item(Key={'imageId': image_id})
@@ -37,6 +37,4 @@ sequenceDiagram
         L3-->>APIGW: 200 OK (body: imageId, labels, imageUrl)
         APIGW-->>Client: JSON Response (labels & imageUrl)
     end
-
-```
 ```
