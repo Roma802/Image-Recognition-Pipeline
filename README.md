@@ -46,8 +46,8 @@ sequenceDiagram
 
     Client->>APIGW: GET /images?imageId=...
     APIGW->>L3: Invoke lambda_handler
-    L3->>DDB: Fetch labels & bucket by imageId
+    L3->>DDB: Fetch Image Metadata by imageId
     DDB-->>L3: Return Image Metadata
     Note over L3: Generate viewable Presigned GET URL
-    L3-->>APIGW: 200 OK (labels & imageUrl)
+    L3-->>APIGW: 200 OK (labels & presignedUrl)
     APIGW-->>Client: JSON Response
