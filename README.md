@@ -2,9 +2,6 @@
 Event-driven serverless image processing architecture built with AWS Lambda, API Gateway, S3, and AWS SAM.
 
 ```mermaid
-Here is the updated Mermaid sequence diagram with all labels, comments, and actors translated into English:
-
-```mermaid
 sequenceDiagram
     autonumber
     actor Client as Client
