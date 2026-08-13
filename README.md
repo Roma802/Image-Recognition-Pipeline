@@ -1,6 +1,12 @@
 # Image-Recognition-Pipeline
 Event-driven serverless image processing architecture built with AWS Lambda, API Gateway, S3, and AWS SAM.
 
+# Image-Recognition-Pipeline
+
+Event-driven serverless image processing architecture built with AWS Lambda, API Gateway, S3, DynamoDB, AWS Rekognition, and AWS SAM.
+
+## Architecture
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -30,21 +36,21 @@ sequenceDiagram
         participant L3
     end
 
-    Client->>APIGW: POST /upload
+    Client->>APIGW: POST /generate-url ({file_name, content_type})
     APIGW->>L1: Invoke lambda_handler
-    L1-->>APIGW: 200 OK (body: presignedUrl)
+    L1-->>APIGW: 200 OK (presignedUrl)
     APIGW-->>Client: Presigned PUT URL
-    Client->>S3: Direct Upload (PUT /uploads/file.jpg)
+    Client->>S3: Direct Upload (PUT image file)
 
     S3->>L2: Trigger: s3:ObjectCreated
-    L2->>Rekog: detect_labels(Bucket, Key)
+    L2->>Rekog: Detect labels in image
     Rekog-->>L2: Detected Labels
-    L2->>DDB: put_item(imageId, labels, bucket)
+    L2->>DDB: Save labels & bucket metadata
 
-    Client->>APIGW: GET /images?imageId=uploads/...
+    Client->>APIGW: GET /images?imageId=...
     APIGW->>L3: Invoke lambda_handler
-    L3->>DDB: get_item(Key={'imageId': image_id})
-    DDB-->>L3: Return Item (labels, bucket)
-    Note over L3: Generate Presigned GET URL locally via SDK (boto3)
-    L3-->>APIGW: 200 OK (body: imageId, labels, imageUrl)
-    APIGW-->>Client: JSON Response (labels & imageUrl)
+    L3->>DDB: Fetch labels & bucket by imageId
+    DDB-->>L3: Return Image Metadata
+    Note over L3: Generate viewable Presigned GET URL
+    L3-->>APIGW: 200 OK (labels & imageUrl)
+    APIGW-->>Client: JSON Response
