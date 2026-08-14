@@ -3,7 +3,10 @@ import boto3
 import uuid
 import os
 
+# Initialize S3 client outside the handler for execution context reuse
 s3_client = boto3.client('s3')
+
+# Retrieve S3 bucket name from environment variables
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 def lambda_handler(event, context):
@@ -27,7 +30,8 @@ def lambda_handler(event, context):
             },
             ExpiresIn=300  
         )
-        
+
+        # Return successful response with CORS headers and upload payload
         return {
             'statusCode': 200,
             'headers': {
@@ -39,7 +43,8 @@ def lambda_handler(event, context):
                 'object_key': object_key
             })
         }
-        
+
+    # Handle unexpected errors and return HTTP 500
     except Exception as e:
         return {
             'statusCode': 500,
