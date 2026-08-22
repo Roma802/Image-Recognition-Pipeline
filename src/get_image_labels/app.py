@@ -15,7 +15,7 @@ s3_client = boto3.client(
 
 # Retrieve DynamoDB table name from environment variables 
 dynamodb = boto3.resource('dynamodb')
-TABLE_NAME = os.environ['TABLE_NAME']
+TABLE_NAME = os.environ.get('TABLE_NAME')
 table = dynamodb.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
