@@ -2,6 +2,7 @@ import json
 import boto3
 import uuid
 import os
+from botocore.config import Config
 
 # Retrieve environment variables
 S3_REGION = os.environ.get('S3_REGION', 'eu-central-1')
