@@ -3,11 +3,16 @@ import boto3
 import uuid
 import os
 
-# Initialize S3 client outside the handler for execution context reuse
-s3_client = boto3.client('s3')
-
-# Retrieve S3 bucket name from environment variables
+# Retrieve environment variables
+S3_REGION = os.environ.get('S3_REGION', 'eu-central-1')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
+
+# Initialize the S3 client using Signature Version 4 for secure presigned URL generation
+s3_client = boto3.client(
+    's3',
+    region_name=S3_REGION,
+    config=Config(signature_version='s3v4')
+)
 
 def lambda_handler(event, context):
     try:
