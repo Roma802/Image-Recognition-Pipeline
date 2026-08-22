@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Image-Recognition-Pipeline
+  Event-driven serverless architecture for image upload, Rekognition analysis, and metadata retrieval.
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+    Runtime: python3.12
+    Environment:
+      Variables:
+        # Переменные объявляются 1 раз для всех функций!
+        TABLE_NAME: !Ref ImageLabelsTable
+        S3_REGION: !Ref AWS::Region
+
+Resources:
+
+  # ============================================================================
+  # 1. DATABASE & STORAGE RESOURCES
+  # ============================================================================
+
+  # DynamoDB Table for storing labels and metadata
+  ImageLabelsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: imageId
+        Type: String
+
+  # S3 Bucket for storing uploaded images
+  ImageUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'PUT', 'POST']
+            AllowedOrigins: ['*']
+
+  # ============================================================================
+  # 2. LAMBDA FUNCTIONS
+  # ============================================================================
+
+  # Function 1: Generates presigned S3 upload URL
+  GenerateUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/generate_upload_url/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageUploadBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageUploadBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /generate-url
+            Method: post
+
+  # Function 2: Triggered by S3 upload, analyzes image via Rekognition and saves to DynamoDB
+  ProcessImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/process_image/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ImageLabelsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject        # <-- Добавили явный доступ к S3 без прямой ссылки на ресурс
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - rekognition:DetectLabels
+              Resource: '*'
+      Events:
+        S3UploadEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref ImageUploadBucket
+            Events: s3:ObjectCreated:*
+
+  # Function 3: Retrieves metadata from DynamoDB and generates presigned view URL
+  GetImageDetailsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_image_details/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImageLabelsTable
+        - S3ReadPolicy:
+            BucketName: !Ref ImageUploadBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /image
+            Method: get
+
+# ============================================================================
+# 3. OUTPUTS
+# ============================================================================
+Outputs:
+  ApiEndpointUrl:
+    Description: "Base URL for API Gateway"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
