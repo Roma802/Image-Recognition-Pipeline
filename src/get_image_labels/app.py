@@ -1,12 +1,20 @@
 import json
 import boto3
 import os
+from botocore.config import Config
 
-# Initialize AWS clients outside the handler for connection reuse
-dynamodb = boto3.resource('dynamodb')
-s3_client = boto3.client('s3')
+# Retrieve environment variables
+S3_REGION = os.environ.get('S3_REGION', 'eu-central-1')
+
+# Initialize S3 client with SigV4 for secure presigned URLs
+s3_client = boto3.client(
+    's3',
+    region_name=S3_REGION,
+    config=Config(signature_version='s3v4')
+)
 
 # Retrieve DynamoDB table name from environment variables 
+dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['TABLE_NAME']
 table = dynamodb.Table(TABLE_NAME)
 
